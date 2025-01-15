@@ -20,7 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 // app.use('/api', ApiRoutes);
 
 app.use('/', (req, res) => {
-    res.send('Welcome to Restaurant App');
+    res.send('Welcome to chat App');
 });
 
 app.listen(PORT, async () => {
