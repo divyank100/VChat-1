@@ -1,0 +1,1 @@
+module.exports.authService = require('./auth_services');
