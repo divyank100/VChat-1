@@ -1,16 +1,78 @@
 const createErrors = require('http-errors');
 const User = require('../models/user_model');
-const { userValidationSchema } = require('../utils/user_validation');
+const userValidationSchema  = require('../utils/user_validation');
 
 const { signAccessToken, signRefreshToken, verifyRefreshToken, } = require('../middleware/jwt_auth_middleware');
 
 class AuthService {
-    async validateUserInput(userData) {
+    async registerUser(userData) {
         try {
-            const value = await userValidationSchema.register.validateAsync(userData);
-            return value;
+            // 1. Validate input
+            const validatedData = await userValidationSchema.validate(userData, {
+                abortEarly: false,
+                allowUnknown: true
+            });
+
+            // 2. Check if user exists
+            const existingUser = await User.findOne({ email: validatedData.email });
+            if (existingUser) {
+                throw createErrors.Conflict(`User with email ${validatedData.email} already exists`);
+            }
+
+            // 3. Create new user
+            const user = new User({
+                userName: validatedData.userName,
+                email: validatedData.email,
+                password: validatedData.password,
+                userProfile: validatedData.userProfile,
+                phone: validatedData.phone,
+                userStatus: validatedData.userStatus,
+                device_token: validatedData.device_token
+            });
+
+            const savedUser = await user.save();
+
+            // 4. Generate tokens
+            const tokens = await this.generateAuthTokens(savedUser._id.toString());
+
+            return { user: savedUser, tokens };
         } catch (error) {
-            throw createErrors.BadRequest(error.message);
+            if (error.isJoi) {
+                throw createErrors.BadRequest(error.details.map(d => d.message).join(', '));
+            }
+            throw error;
+        }
+    }
+
+    async loginUser(credentials) {
+        try {
+            // 1. Validate login input
+            const validatedData = await userValidationSchema.validateAsync(credentials, {
+                abortEarly: false,
+                allowUnknown: true
+            });
+
+            // 2. Find user
+            const user = await User.findOne({ email: validatedData.email });
+            if (!user) {
+                throw createErrors.NotFound('User not found');
+            }
+
+            // 3. Verify password
+            const isValidPassword = await user.isValidPassword(validatedData.password);
+            if (!isValidPassword) {
+                throw createErrors.Unauthorized('Invalid email or password');
+            }
+
+            // 4. Generate tokens
+            const tokens = await this.generateAuthTokens(user._id.toString());
+
+            return { user, tokens };
+        } catch (error) {
+            if (error.isJoi) {
+                throw createErrors.BadRequest('Invalid email or password');
+            }
+            throw error;
         }
     }
 
@@ -20,50 +82,13 @@ class AuthService {
         return { accessToken, refreshToken };
     }
 
-    async userExists(email) {
-        try {
-            const user = await User.findOne({ email });
-            return user;
+    async handleRefreshToken(refreshToken) {
+        if (!refreshToken) {
+            throw createErrors.BadRequest('Refresh token is required');
         }
-        catch (error) {
-            throw createErrors.Conflict(`User with email ${email} already exists`);
-        }
+        const userId = await verifyRefreshToken(refreshToken);
+        return userId;
     }
-
-    async registerUser(userData) {
-        try {
-            const user = new User(userData);
-            const savedUser = await user.save();
-            return savedUser;
-        } catch (error) {
-            throw createErrors.InternalServerError(error.message);
-        }
-    }
-
-    async findUserByEmail(email) {
-        try {
-            const user = await User.findOne({ email });
-            if (!user) throw createErrors.NotFound('User not found');
-            return user;
-        }
-        catch (error) {
-            throw createErrors.NotFound();
-        }
-    }
-
-    // async loginUser(email, password){
-    //     try{
-    //         const user = await User.findOne({email});
-    //         if(!user) throw createErrors.NotFound('User not registered');
-    //         const isMatch = await user.isValidPassword(password);
-    //         if(!isMatch) throw createErrors.Unauthorized('Invalid credentials');
-    //         return user;
-    //     }
-    //     catch (error) {
-    //         throw createErrors.Unauthorized(`Invalid credentials`);
-    //     }
-    // }
-
     async validatePassword(password) {
         try {
             const isMatch = await User.isValidPassword(password);
@@ -73,19 +98,6 @@ class AuthService {
         catch (error) {
             throw createErrors.BadRequest(error.message);
         }
-    }
-
-    async handleRefreshToken(refreshToken) {
-        if (!refreshToken) {
-            throw createErrors.BadRequest('Refresh token is required');
-        }
-
-        if (revokedTokens.has(refreshToken)) {
-            throw createErrors.Unauthorized('Refresh token has been revoked');
-        }
-
-        const userId = await verifyRefreshToken(refreshToken);
-        return userId;
     }
 
     async revokeToken(refreshToken) {
@@ -110,4 +122,4 @@ class AuthService {
     }
 }
 
-module.exports = new AuthService();
+module.exports =  new AuthService();

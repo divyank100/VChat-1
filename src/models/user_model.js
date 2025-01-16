@@ -8,7 +8,6 @@ const userSchema = new mongoose.Schema({
     userName: {
         type: String,
         required: true,
-        unique: true,
         trim: true
     },
     email: {
@@ -69,6 +68,7 @@ userSchema.pre('save', async function (next) {
         }
         next()
     } catch (error) {
+        console.error('Error during password hashing:', error);
         next(error)
     }
 })

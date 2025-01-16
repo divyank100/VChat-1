@@ -4,6 +4,7 @@ const connect = require('./config/db');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const cors = require('cors');
+const connectDB = require('./config/db');
 
 const { PORT } = require('./config/index');
 const ApiRoutes = require('./routes/index');
@@ -38,6 +39,10 @@ app.use((err, req, res, next) => {
 })
 
 app.listen(PORT, async () => {
-    console.log(`Server is running on port ${PORT}`.bgMagenta);
-    await connect();
+    try {
+        await connectDB();
+        console.log(`Server is running on port ${PORT}`.bgCyan);
+    } catch (error) {
+        console.error('Server startup error:'.bgRed, error.message);
+    }
 });
