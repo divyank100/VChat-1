@@ -28,7 +28,7 @@ module.exports = {
             const accessToken = await signAccessToken(savedUser.id)
             const refreshToken = await signRefreshToken(savedUser.id)
 
-            res.send({ accessToken, refreshToken })
+            res.send({user:savedUser, accessToken, refreshToken })
         } catch (error) {
             if (error.isJoi === true) error.status = 422
             next(error)
@@ -37,18 +37,23 @@ module.exports = {
 
     login: async (req, res, next) => {
         try {
+            console.log('login')
             const result = await authSchema.validateAsync(req.body)
+            console.log(result)
             const user = await User.findOne({ email: result.email })
+            console.log(user)
             if (!user) throw createError.NotFound('User not registered')
 
             const isMatch = await user.isValidPassword(result.password)
             if (!isMatch)
                 throw createError.Unauthorized('Username/password not valid')
 
+            console.log(isMatch)
+
             const accessToken = await signAccessToken(user.id)
             const refreshToken = await signRefreshToken(user.id)
 
-            res.send({ accessToken, refreshToken })
+            res.send({savedUser, accessToken, refreshToken })
         } catch (error) {
             if (error.isJoi === true)
                 return next(createError.BadRequest('Invalid Username/Password'))
