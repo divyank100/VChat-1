@@ -26,11 +26,11 @@ const userSchema = new mongoose.Schema({
         trim: true,
         required: true,
         minlength: 8,
-        validate(value) {
-            if (!value.match(/\d/) || !value.match(/[a-zA-Z]/)) {
-                throw new Error('Password must contain at least one letter and one number');
-            }
-        }
+        // validate(value) {
+        //     if (!value.match(/\d/) || !value.match(/[a-zA-Z]/)) {
+        //         throw new Error('Password must contain at least one letter and one number');
+        //     }
+        // }
     },
     userProfile: {
         type: String,

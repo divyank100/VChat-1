@@ -89,6 +89,7 @@ class AuthService {
         const userId = await verifyRefreshToken(refreshToken);
         return userId;
     }
+    
     async validatePassword(password) {
         try {
             const isMatch = await User.isValidPassword(password);
