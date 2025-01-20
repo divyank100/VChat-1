@@ -1,6 +1,7 @@
 const createError = require('http-errors')
 const User = require('../models/user_model')
 const { authSchema } = require('../utils/auth_validation')
+const bcrypt= require("bcrypt")
 const {
     signAccessToken,
     signRefreshToken,
@@ -28,7 +29,7 @@ module.exports = {
             const accessToken = await signAccessToken(savedUser.id)
             const refreshToken = await signRefreshToken(savedUser.id)
 
-            res.send({user:savedUser, accessToken, refreshToken })
+            res.send({user:savedUser, accessToken, refreshToken,status:200,message:"User registered successfully" })
         } catch (error) {
             if (error.isJoi === true) error.status = 422
             next(error)
@@ -53,13 +54,37 @@ module.exports = {
             const accessToken = await signAccessToken(user.id)
             const refreshToken = await signRefreshToken(user.id)
 
-            res.send({savedUser, accessToken, refreshToken })
+            res.send({user, accessToken, refreshToken, status:200,message:"User login successful" })
         } catch (error) {
             if (error.isJoi === true)
                 return next(createError.BadRequest('Invalid Username/Password'))
             next(error)
         }
     },
+
+    forgotPassword: async(req,res,next)=>{
+        try{
+            const result= await authSchema.validateAsync(req.body)
+            console.log("result-----",result.email);
+            const salt=await bcrypt.genSalt(10)
+            const hashedPassword=await bcrypt.hash(result.password,salt)
+            const user=await User.findOneAndUpdate({email:result.email},{password:hashedPassword},{ returnDocument: 'after' })
+            
+            if(user){
+                res.send({status:200,message:"Password updated successfully"})
+            }
+            console.log("USER----",user);
+            
+            throw createError.NotFound('User not registered')
+            
+        }
+        catch(error){
+            if(error.isJoi === true){
+                return next(createError.BadRequest("Invalid email id"))
+            }
+        }
+    },
+
 
     refreshToken: async (req, res, next) => {
         try {

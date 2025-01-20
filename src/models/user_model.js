@@ -7,7 +7,6 @@ const { boolean, required, string } = require('joi');
 const userSchema = new mongoose.Schema({
     userName: {
         type: String,
-        required: true,
         trim: true
     },
     email: {

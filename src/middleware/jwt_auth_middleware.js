@@ -23,8 +23,8 @@ module.exports = {
     },
 
     verifyAccessToken: (req, res, next) => {
-        if (!req.headers['authorization']) return next(createError.Unauthorized())
-        const authHeader = req.headers['authorization']
+        if (!req.headers['Authorization']) return next(createError.Unauthorized())
+        const authHeader = req.headers['Authorization']
         const bearerToken = authHeader.split(' ')
         const token = bearerToken[1]
         JWT.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, payload) => {
